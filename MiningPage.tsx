@@ -1,6 +1,16 @@
 import {Button, ScrollView, StyleSheet, Text, TextInput, ToastAndroid, View} from "react-native";
-import {useState} from "react";
+import {useEffect, useState} from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
+const key_ore_storage = "key_ore_storage"
+const key_mining_speed = "key_mining_speed"
+const key_cnt_mining_tools_per_ship = "key_cnt_mining_tools_per_ship"
+const key_cnt_ship = "key_cnt_ship"
+const key_ore_volume = "key_ore_volume"
+
+function toast(msg: string) {
+    ToastAndroid.show(msg, ToastAndroid.SHORT)
+}
 
 const MiningPage = () => {
     const [text_ore_storage, set_text_ore_storage] = useState('3000')
@@ -13,6 +23,46 @@ const MiningPage = () => {
     const [time_storage_filled, set_time_storage_filled] = useState(0)
     const [cnt_fill_storage, set_cnt_fill_storage] = useState(0)
     const [time_empty_ore, set_time_empty_ore] = useState(0)
+
+    async function save_configs() {
+        await AsyncStorage.multiSet(
+            [
+                [key_ore_storage, text_ore_storage],
+                [key_mining_speed, text_mining_speed],
+                [key_cnt_mining_tools_per_ship, text_cnt_mining_tools_per_ship],
+                [key_cnt_ship, text_cnt_ship],
+                [key_ore_volume, text_ore_volume],
+            ]
+            , errors => {
+                if (errors) toast(JSON.stringify(errors))
+            })
+        toast("保存成功")
+    }
+
+    const func_table = new Map([
+        [key_ore_storage, set_text_ore_storage],
+        [key_mining_speed, set_text_mining_speed,],
+        [key_cnt_mining_tools_per_ship, set_text_cnt_mining_tools_per_ship],
+        [key_cnt_ship, set_text_cnt_ship],
+        [key_ore_volume, set_text_ore_volume],
+    ])
+
+    async function load_config() {
+        await AsyncStorage.multiGet([], (errors, result) => {
+            if (errors) {
+                toast(JSON.stringify(errors))
+            }
+            toast(JSON.stringify(result?.keys()))
+            if (!result) return
+            for (let i = 0; i < result.length; i++) {
+                let [key, value] = result[i]
+                if (!value) continue
+                let func = func_table.get(key)
+                if (func) func(value)
+            }
+        })
+        toast("数据读取成功")
+    }
 
 
     function toast_config() {
@@ -36,6 +86,9 @@ const MiningPage = () => {
     }
 
     const place_holder = "请输入";
+    useEffect(() => {
+        load_config().then()
+    }, [])
 
     return (
         <ScrollView>
@@ -91,8 +144,12 @@ const MiningPage = () => {
                     <Text>清空矿石总耗时</Text>
                     <Text>{time_empty_ore}</Text>
                 </View>
+
                 <Button title={"计算"} onPress={cacluate}/>
-                <Button title="一键设置闹钟" onPress={() => toast_config()}/>
+                <View style={styles.lab_item}>
+                    <Button title={"保存参数"} onPress={save_configs}/>
+                    <Button title="一键设置闹钟" onPress={() => toast_config()}/>
+                </View>
             </View>
 
         </ScrollView>
